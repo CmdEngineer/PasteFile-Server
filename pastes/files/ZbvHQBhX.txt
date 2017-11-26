@@ -1,0 +1,1 @@
+{app:"cdm.note_stash",name:"hey"}<=Data=>{title:"hey",content:"heyyy"}
