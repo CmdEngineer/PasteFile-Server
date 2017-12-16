@@ -1,4 +1,4 @@
-var port = process.env.PORT || 3000;
+var port = process.env.PORT || 80;
 var app = require('express')();
 var http = require('http').Server(app);
 var fs = require('fs');
@@ -15,18 +15,39 @@ http.listen(port, function(){
     var stdin = process.openStdin();
     stdin.addListener("data", function(d) {
         var cmd = d.toString().trim();
+        var args = cmd.split(" ");
         var result = "Not a command!";
         console.log(cmd + " >> " + result);
+        if(args[0] == "new"){
+            if(args[1] && args[2]){
+                newPaste(args[1], args[2]);
+                result = "Created!";
+            }else result = "Please enter 'new string string'";
+        }
+        console.log(args[0] + " >> " + result);
      });
 });
 
 app.post('*', function(req, res){
-    var info = req.body.info;
-    var json = req.body.json;
-    var id = newPaste(info +  "<=Data=>" + json);
-    res.send(id);
-    appendIDList(id + ":");
-    console.log("Paste uploaded: " + id);
+    var user = req.body.user || req.get("user");
+    var info = req.body.info || req.get("info");
+    var json = req.body.json || req.get("json");
+    var cmd = req.body.cmd || req.get("cmd") || "UPLOAD";
+    var id = req.body.id || req.get("id");
+    if(cmd.indexOf("UPLOAD") !== -1){
+        id = newPaste(user, info +  "<=Data=>" + json);
+        res.send(id);
+        appendIDList(id + ":");
+        console.log("Paste uploaded: " + id);
+    }else if(cmd.indexOf("REMOVE") !== -1){
+        res.send("Removed!");
+        removePaste(user, id);
+        console.log("Paste removed: " + id);
+    }else if(cmd.indexOf("EDIT") !== -1){
+        res.send("Edited!");
+        editPaste(user, data, id);
+        console.log("Paste edited: " + id);
+    }
 });
 
 app.get('*', function(req, res){
@@ -45,11 +66,55 @@ app.get('*', function(req, res){
     }else{
         res.send(usedIDs.length + "");
     }
-})
+});
 
-function newPaste(data){
+function newPaste(user, data){
     var id = newPasteID();
-    fs.writeFile(__dirname + '/pastes/files/' + id + '.txt',data, 'utf8', function(err){
+    var playerDir = __dirname + '/pastes/players/' + user;
+    var fileDir = __dirname + '/pastes/files/'; 
+    if (!fs.existsSync(fileDir)){
+        fs.mkdirSync(fileDir);
+    }
+    fs.writeFile(fileDir + '/' + id + '.txt', data, 'utf8', function(err){
+        if(err) return err;
+    });
+    if (!fs.existsSync(playerDir)){
+        fs.mkdirSync(playerDir);
+    }
+    fs.writeFile(playerDir + "/" + id + '.txt', data, 'utf8', function(err){
+        if(err) return err;
+    });
+    return id;
+}
+
+function removePaste(user, id){
+    var playerDir = __dirname + '/pastes/players/' + user;
+    var fileDir = __dirname + '/pastes/files/'; 
+    if (!fs.existsSync(fileDir)){
+        fs.mkdirSync(fileDir);
+    }
+    fs.unlinkSync(fileDir + "/" + id + ".txt", 'utf8');
+    if (fs.existsSync(playerDir)){
+        fs.unlinkSync(playerDir + "/" + id + ".txt", 'utf8');
+        if(usedIDs.indexOf(id) !== -1){
+            usedIDs = removeIDList(id);
+        }
+    }
+}
+
+function editPaste(user, data, id){
+    var playerDir = __dirname + '/pastes/players/' + user;
+    var fileDir = __dirname + '/pastes/files/'; 
+    if (!fs.existsSync(fileDir)){
+        fs.mkdirSync(fileDir);
+    }
+    fs.writeFile(fileDir + '/' + id + '.txt', data, 'utf8', function(err){
+        if(err) return err;
+    });
+    if (!fs.existsSync(playerDir)){
+        fs.mkdirSync(playerDir);
+    }
+    fs.writeFile(playerDir + "/" + id + '.txt', data, 'utf8', function(err){
         if(err) return err;
     });
     return id;
@@ -86,8 +151,9 @@ function saveIDList(){
         if(err) return err;
     });
     var id = "";
-    foreach(str in usedIDs)
+    for(str in usedIDs){
         id += str + ":";
+    }
     fs.writeFile(__dirname + '/backup.txt', id, 'utf8', function(err){
         if(err) return err;
     });
@@ -98,3 +164,20 @@ function appendIDList(text){
         if(err) return err;
     });
 }
+
+function removeIDList(id){
+    var data = fs.readFileSync(__dirname + '/backup.txt', 'utf8');
+    data = data.replace(id + ":", "");
+    usedIDs.remove(id);
+}
+
+Array.prototype.remove = function() {
+    var what, a = arguments, L = a.length, ax;
+    while (L && this.length) {
+        what = a[--L];
+        while ((ax = this.indexOf(what)) !== -1) {
+            this.splice(ax, 1);
+        }
+    }
+    return this;
+};
