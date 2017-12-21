@@ -1,4 +1,4 @@
-var port = process.env.PORT || 80;
+var port = process.env.PORT || 3001;
 var app = require('express')();
 var http = require('http').Server(app);
 var fs = require('fs');
@@ -35,18 +35,33 @@ app.post('*', function(req, res){
     var cmd = req.body.cmd || req.get("cmd") || "UPLOAD";
     var id = req.body.id || req.get("id");
     if(cmd.indexOf("UPLOAD") !== -1){
-        id = newPaste(user, info +  "<=Data=>" + json);
-        res.send(id);
-        appendIDList(id + ":");
-        console.log("Paste uploaded: " + id);
+            if(checkInput(user)){
+                id = newPaste(user, info + "<=Data=>" + json);
+                res.send(id);
+                appendIDList(id);
+                console.log("Paste uploaded: " + id);
+            }else{
+                id = newPasteSingular(info +  "<=Data=>" + json);
+                res.send(id);
+                appendIDList(id);
+                console.log("Paste uploaded: " + id);
+            }
+        }
     }else if(cmd.indexOf("REMOVE") !== -1){
         res.send("Removed!");
-        removePaste(user, id);
+        if(checkInput(user)){
+            removePaste(user, id);
+        }else{
+            removePasteSingular(id);
+        }
+        removeIDList(id);
         console.log("Paste removed: " + id);
     }else if(cmd.indexOf("EDIT") !== -1){
-        res.send("Edited!");
-        editPaste(user, data, id);
-        console.log("Paste edited: " + id);
+        if(checkInput(info) && checkInput(json)){
+            res.send("Edited!");
+            editPaste(user, data, id);
+            console.log("Paste edited: " + id);
+        }
     }
 });
 
@@ -56,32 +71,52 @@ app.get('*', function(req, res){
     if(route.length == 8){
         for (var i = 0; i < route.length; i++) {
             if(possible.indexOf(route.charAt(i)) == -1){
-                 res.send("Error.");
-                return false;
+                res.send("Error.");
+                return;
             }
         }
         var id = getPaste(route);
         res.send(id);
         console.log("Paste downloaded: " + route);
+    }else if(route.indexOf("get/") !== -1){
+        route = route.substring(4, route.toString().length);
+        var user = req.body.user || req.get("user") || route;
+        res.send(fs.readdirSync(__dirname + "/pastes/players/" + user, 'utf8'));
+    }else if(route.indexOf("get") !== -1){
+        res.send(fs.readdirSync(__dirname + "/pastes/files/", 'utf8'));
     }else{
         res.send(usedIDs.length + "");
     }
 });
-
 function newPaste(user, data){
     var id = newPasteID();
+    var rootDir = __dirname + '/pastes/players';
     var playerDir = __dirname + '/pastes/players/' + user;
-    var fileDir = __dirname + '/pastes/files/'; 
+    var fileDir = __dirname + '/pastes/files'; 
     if (!fs.existsSync(fileDir)){
         fs.mkdirSync(fileDir);
     }
     fs.writeFile(fileDir + '/' + id + '.txt', data, 'utf8', function(err){
         if(err) return err;
     });
+    if (!fs.existsSync(rootDir)){
+        fs.mkdirSync(rootDir);
+    }
     if (!fs.existsSync(playerDir)){
         fs.mkdirSync(playerDir);
     }
     fs.writeFile(playerDir + "/" + id + '.txt', data, 'utf8', function(err){
+        if(err) return err;
+    });
+    return id;
+}
+function newPasteSingular(data){
+    var id = newPasteID();
+    var fileDir = __dirname + '/pastes/files/'; 
+    if (!fs.existsSync(fileDir)){
+        fs.mkdirSync(fileDir);
+    }
+    fs.writeFile(fileDir + '/' + id + '.txt', data, 'utf8', function(err){
         if(err) return err;
     });
     return id;
@@ -93,15 +128,22 @@ function removePaste(user, id){
     if (!fs.existsSync(fileDir)){
         fs.mkdirSync(fileDir);
     }
-    fs.unlinkSync(fileDir + "/" + id + ".txt", 'utf8');
-    if (fs.existsSync(playerDir)){
+    if(fs.existsSync(fileDir + "/" + id + ".txt")){
+        fs.unlinkSync(fileDir + "/" + id + ".txt", 'utf8');
+    }
+    if (fs.existsSync(playerDir + "/" + id + ".txt")){
         fs.unlinkSync(playerDir + "/" + id + ".txt", 'utf8');
-        if(usedIDs.indexOf(id) !== -1){
-            usedIDs = removeIDList(id);
-        }
     }
 }
-
+function removePasteSingular(id){
+    var fileDir = __dirname + '/pastes/files/'; 
+    if (!fs.existsSync(fileDir)){
+        fs.mkdirSync(fileDir);
+    }
+    if(fs.existsSync(fileDir + "/" + id + ".txt")){
+        fs.unlinkSync(fileDir + "/" + id + ".txt", 'utf8');
+    }
+}
 function editPaste(user, data, id){
     var playerDir = __dirname + '/pastes/players/' + user;
     var fileDir = __dirname + '/pastes/files/'; 
@@ -147,37 +189,37 @@ function loadIDList(){
 }
 
 function saveIDList(){
-    fs.truncate(__dirname + '/backup.txt',0, 'utf8', function(err){
-        if(err) return err;
-    });
-    var id = "";
-    for(str in usedIDs){
-        id += str + ":";
+    fs.truncateSync(__dirname + '/backup.txt',0);
+    var msg = "";
+    for(var i = 0; i < usedIDs.length; i++){
+        msg += usedIDs[i] + ":";
     }
-    fs.writeFile(__dirname + '/backup.txt', id, 'utf8', function(err){
-        if(err) return err;
-    });
+    fs.writeFileSync(__dirname + '/backup.txt', msg, 'utf8');
 }
 
-function appendIDList(text){
-    return fs.appendFileSync(__dirname + '/backup.txt', text, 'utf8', function(err){
+function appendIDList(id){
+    fs.appendFileSync(__dirname + '/backup.txt', id + ":", 'utf8', function(err){
         if(err) return err;
     });
+    var data = fs.readFileSync(__dirname + '/backup.txt');
+    usedIDs = data.toString().split(":");
 }
-
 function removeIDList(id){
-    var data = fs.readFileSync(__dirname + '/backup.txt', 'utf8');
-    data = data.replace(id + ":", "");
-    usedIDs.remove(id);
-}
-
-Array.prototype.remove = function() {
-    var what, a = arguments, L = a.length, ax;
-    while (L && this.length) {
-        what = a[--L];
-        while ((ax = this.indexOf(what)) !== -1) {
-            this.splice(ax, 1);
+    var newArray = [];
+    for(var i = 0; i < usedIDs.length; i++){
+        if(usedIDs[i] !== id){
+            newArray.push(usedIDs[i]);
         }
     }
-    return this;
-};
+    usedIDs = newArray.slice(1, newArray.length-1);
+    saveIDList();
+}
+
+function checkInput(data){
+    if(data){
+        if(data !== " "){
+            return true;
+        }
+    }
+    return false;
+}
