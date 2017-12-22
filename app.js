@@ -35,6 +35,7 @@ app.post('*', function(req, res){
     var cmd = req.body.cmd || req.get("cmd") || "UPLOAD";
     var id = req.body.id || req.get("id");
     if(cmd.indexOf("UPLOAD") !== -1){
+        if(checkInput(info) && checkInput(json)){
             if(checkInput(user)){
                 id = newPaste(user, info + "<=Data=>" + json);
                 res.send(id);
@@ -81,9 +82,13 @@ app.get('*', function(req, res){
     }else if(route.indexOf("get/") !== -1){
         route = route.substring(4, route.toString().length);
         var user = req.body.user || req.get("user") || route;
-        res.send(fs.readdirSync(__dirname + "/pastes/players/" + user, 'utf8'));
+        if(fs.existsSync(__dirname + "/pastes/players/" + user)){
+            res.send(fs.readdirSync(__dirname + "/pastes/players/" + user, 'utf8'));
+        }else res.send("Error!");
     }else if(route.indexOf("get") !== -1){
-        res.send(fs.readdirSync(__dirname + "/pastes/files/", 'utf8'));
+        if(fs.existsSync(__dirname + "/pastes/files/")){
+            res.send(fs.readdirSync(__dirname + "/pastes/files/", 'utf8'));
+        }else res.send("Error!");
     }else{
         res.send(usedIDs.length + "");
     }
