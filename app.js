@@ -192,25 +192,28 @@ function getPaste(id){
 function loadIDList(){
     var ids = [];
     var id = fs.readFileSync(__dirname + "/backup.txt", 'utf8');
-    ids = id.split(":");
+    ids = id.split("\n");
+    console.log(ids);
     return ids;
 }
 
 function saveIDList(){
     fs.truncateSync(__dirname + '/backup.txt',0);
     var msg = "";
-    for(var i = 0; i < usedIDs.length; i++){
-        msg += usedIDs[i] + ":";
+    msg += usedIDs[0];
+    for(var i = 1; i < usedIDs.length; i++){
+        msg += "\n" + usedIDs[i];
     }
     fs.writeFileSync(__dirname + '/backup.txt', msg, 'utf8');
 }
 
 function appendIDList(id){
-    fs.appendFileSync(__dirname + '/backup.txt', id + ":", 'utf8', function(err){
+    fs.appendFileSync(__dirname + '/backup.txt', "\n" + id, 'utf8', function(err){
         if(err) return err;
     });
     var data = fs.readFileSync(__dirname + '/backup.txt');
-    usedIDs = data.toString().split(":");
+    usedIDs = data.toString().split("\n");
+    console.log(usedIDs);
 }
 function removeIDList(id){
     var newArray = [];
@@ -219,7 +222,8 @@ function removeIDList(id){
             newArray.push(usedIDs[i]);
         }
     }
-    usedIDs = newArray.slice(1, newArray.length-1);
+    usedIDs = newArray;
+    console.log(usedIDs);
     saveIDList();
 }
 
