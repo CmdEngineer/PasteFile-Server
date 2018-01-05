@@ -193,7 +193,6 @@ function loadIDList(){
     var ids = [];
     var id = fs.readFileSync(__dirname + "/backup.txt", 'utf8');
     ids = id.split("\n");
-    console.log(ids);
     return ids;
 }
 
@@ -213,7 +212,6 @@ function appendIDList(id){
     });
     var data = fs.readFileSync(__dirname + '/backup.txt');
     usedIDs = data.toString().split("\n");
-    console.log(usedIDs);
 }
 function removeIDList(id){
     var newArray = [];
@@ -223,7 +221,6 @@ function removeIDList(id){
         }
     }
     usedIDs = newArray;
-    console.log(usedIDs);
     saveIDList();
 }
 
