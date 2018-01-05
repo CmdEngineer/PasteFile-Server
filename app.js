@@ -110,7 +110,7 @@ function newPaste(user, data){
     if (!fs.existsSync(playerDir)){
         fs.mkdirSync(playerDir);
     }
-    fs.writeFile(playerDir + "/" + id + '.txt', data, 'utf8', function(err){
+    fs.writeFile(playerDir + "/" + id + '.txt', "OwO", 'utf8', function(err){
         if(err) return err;
     });
     return id;
@@ -138,6 +138,9 @@ function removePaste(user, id){
     }
     if (fs.existsSync(playerDir + "/" + id + ".txt")){
         fs.unlinkSync(playerDir + "/" + id + ".txt", 'utf8');
+    }
+    if(fs.readdirSync(playerDir).length == 0){
+        fs.rmdirSync(playerDir);
     }
 }
 function removePasteSingular(id){
@@ -221,10 +224,8 @@ function removeIDList(id){
 }
 
 function checkInput(data){
-    if(data){
-        if(data !== " "){
-            return true;
-        }
+    if(data != null){
+        return true;
     }
     return false;
 }
