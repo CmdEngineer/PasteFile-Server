@@ -40,12 +40,12 @@ app.post('*', function(req, res){
                 id = newPaste(user, info + "<=Data=>" + json);
                 res.send(id);
                 appendIDList(id);
-                console.log("Paste uploaded: " + id);
+                console.log("[+] " + id);
             }else{
                 id = newPasteSingular(info +  "<=Data=>" + json);
                 res.send(id);
                 appendIDList(id);
-                console.log("Paste uploaded: " + id);
+                console.log("[+] " + id);
             }
         }
     }else if(cmd.indexOf("REMOVE") !== -1){
@@ -56,12 +56,11 @@ app.post('*', function(req, res){
             removePasteSingular(id);
         }
         removeIDList(id);
-        console.log("Paste removed: " + id);
+        console.log("[-] " + id);
     }else if(cmd.indexOf("EDIT") !== -1){
         if(checkInput(info) && checkInput(json)){
             res.send("Edited!");
             editPaste(user, data, id);
-            console.log("Paste edited: " + id);
         }
     }
 });
@@ -78,7 +77,6 @@ app.get('*', function(req, res){
         }
         var id = getPaste(route);
         res.send(id);
-        console.log("Paste downloaded: " + route);
     }else if(route.indexOf("get/") !== -1){
         route = route.substring(4, route.toString().length);
         var user = req.body.user || req.get("user") || route;
